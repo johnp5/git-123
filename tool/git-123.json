@@ -1,0 +1,34 @@
+{
+  "excludeRepos": [
+    "exclude1",
+    "exclude2"
+  ],
+  "bitBucketOrg": "your_org",
+  "localReposDir": "C:\\git",
+  "defaultRepo": "",
+  "devHeadBranch": "devhead",
+  "mainDevBranch": "development",
+  "migrationFolder": "sprint4200",
+  "mainProdBranch": "master",
+  "specificDevHead": {
+      "lma": "lmadev"
+  },
+  "specificMainDev": {
+      "abc": "release/4.1.1",
+      "abc-scripts": "release/4.1.1"
+  },
+  "specificMigration": {
+      "lma": "sprint4100",
+      "lma-scripts": "sprint4100"
+  },
+  "branchPrefixes": [
+    "issue",
+    "release"
+  ],
+  "releases": [
+    "4.1.0.0"
+  ],
+  "outputToFile": true,
+  "stepsPrefix": "issue",
+  "stepsTemplate": "migration\\template"
+}
