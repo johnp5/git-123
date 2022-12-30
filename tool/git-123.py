@@ -603,10 +603,21 @@ def main(repo):
             print_("You must start from branch: {0}".format(gMainBranch))
             return
         if optionInt in (0, 1, 20):
-            issue = input(" Issue/Task: ")
-            if not issue:
-                return
-            stepsBranch = "{}/{}".format(gStepsPrefix, issue)
+            if taskBranch.find(gStepsPrefix) == 0:
+                currentIssue = taskBranch[taskBranch.rfind("/") + 1:]
+                issue = input(" Issue/Task (0 for {}): {}/".format(currentIssue, gStepsPrefix))
+                if not issue:
+                    return
+                if issue == "0":
+                    stepsBranch = taskBranch
+                    issue = currentIssue
+                else:
+                    stepsBranch = "{}/{}".format(gStepsPrefix, issue)
+            else:
+                issue = input(" Issue/Task: {}/".format(gStepsPrefix))
+                if not issue:
+                    return
+                stepsBranch = "{}/{}".format(gStepsPrefix, issue)
         if optionInt == 0:
             stepsPath = os.path.join(repoPath, gStepsTemplate)
             c = "xcopy {} {}\\migration\\{}\\{} /i /k".format(
