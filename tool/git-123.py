@@ -73,7 +73,7 @@ def print_indented(text, level=1):
             print_(indentation + line)
 
 
-def getResponse(options, level=1, message="    >>> "):
+def getResponse(options, level=1, message="    >>> ", returnInt=True):
     m = len(max(options, key=len))
     s = "-" * 16 + "-" * m
     print_indented("\n" + s, level)
@@ -87,39 +87,79 @@ def getResponse(options, level=1, message="    >>> "):
         )
     print_indented(s + "\n", level)
     optionStr = input(message)
+    if optionStr == "00":
+        return 200
     try:
         optionInt = int(optionStr)
     except:
-        return 1000
+        if returnInt:
+            return 1000
+        else:
+            return 1000, ''
     if optionInt < 100:
         try:
             option = options[optionInt]
         except:
             raise Exception(" Invalid Selection.")
         print_(" Selected: {}".format(option))
-    return optionInt
+    if returnInt:
+        return optionInt
+    else:
+        return optionInt, option
+
+
+def selectMessage():
+    global gMessages
+    commitMessage = None
+    numLines = len(gMessages)
+    newMessage = False
+    if numLines > 0:
+        msgReversed = []
+        for m in reversed(gMessages):
+            msgReversed.append(m.strip("\n"))
+        msgReversed.append("-- [ New Message ]")
+        r, commitMessage = getResponse(msgReversed, 0, "Select Message:", False)
+        if r == numLines:
+            newMessage = True
+    else:
+        newMessage = True
+    if newMessage:
+        newMessage = False
+        commitMessage = input(" Commit Message: ")
+        if commitMessage:
+            gMessages.append(commitMessage + "\n")
+            newMessage = True
+    return commitMessage
 
 
 def commitAll(arg=None):
     if arg:
         commitMessage = arg
     else:
-        commitMessage = input(" Commit Message: ")
-    c = gCommitAll[:]
-    c.append(commitMessage)
-    exitcode, out, err = run_command(c)
-    print_(out)
+        commitMessage = selectMessage()
+    if commitMessage:
+        c = gCommitAll[:]
+        c.append(commitMessage)
+        exitcode, out, err = run_command(c)
+        print_(out)
+        return True
+    else:
+        return False
 
 
 def commit(arg=None):
     if arg:
         commitMessage = arg
     else:
-        commitMessage = input(" Commit Message: ")
-    c = gCommit[:]
-    c.append(commitMessage)
-    exitcode, out, err = run_command(c)
-    print_(out)
+        commitMessage = selectMessage()
+    if commitMessage:
+        c = gCommit[:]
+        c.append(commitMessage)
+        exitcode, out, err = run_command(c)
+        print_(out)
+        return True
+    else:
+        return False
 
 
 def fetch(arg=None):
@@ -236,21 +276,21 @@ def merge_into_devhead(repo, taskBranch):
 def afterPush(repo, taskBranch):
     if taskBranch != gSelectedDevHead:
         options = [
-            "Open in BitBucket",                      # 0
-            "Merge into {}".format(gSelectedDevHead), # 1
+            "Merge into {}".format(gSelectedDevHead), # 0
+            "Open in BitBucket",                      # 1
             "Main Menu",                              # 2
             "Exit",                                   # 3
         ]
         optionInt = getResponse(options)
 
         if optionInt == 0:
+            merge_into_devhead(repo, taskBranch)
+        elif optionInt == 1:
             url = "https://bitbucket.org/{}/{}/branch/{}".format(
                 gBitBucketOrg, repo, taskBranch
             )
             print_("Opening Branch...")
             webbrowser.open(url)
-        elif optionInt == 1:
-            merge_into_devhead(repo, taskBranch)
         elif optionInt == 2:
             main(repo)
         elif optionInt == 3:
@@ -395,7 +435,7 @@ def header_footer(repo, taskBranch):
     print_(s + "\n")
 
 
-def main(repo):
+def main(repo, optionOne=None, optionTwo=None):
     repoPath = os.path.join(gLocalReposDir, repo)
     exitcode, out, err = run_command(["git", "symbolic-ref", "--short", "HEAD"])
     taskBranch = out.strip()
@@ -403,62 +443,68 @@ def main(repo):
     exitcode, out, err = run_command(["git", "status"])
     print_(out)
 
-    options = [
-        "Commit...",                               # 0
-        "Checkout...",                             # 1
-        "Pull / Push / Fetch...",                  # 2
-        "Migration Steps...",                      # 3
-        "Merge...",                                # 4
-        "New Branch",                              # 5
-        "Open in BitBucket",                       # 6
-        "Remote Gone",                             # 7
-        "Repository List",                         # 8
-        "Exit (Press Enter)",                      # 9
-    ]
-    optionInt = getResponse(options)
+    if optionOne is not None:
+        optionInt = optionOne
+    else:
+        options = [
+            "Commit...",                               # 0
+            "Checkout...",                             # 1
+            "Pull / Push / Fetch...",                  # 2
+            "Migration Steps...",                      # 3
+            "Merge...",                                # 4
+            "New Branch",                              # 5
+            "Open in BitBucket",                       # 6
+            "Remote Gone",                             # 7
+            "Repository List",                         # 8
+            "Exit (Press Enter)",                      # 9
+        ]
+        optionInt = getResponse(options)
 
     if optionInt == 0:
-        options = [
-            "Commit All, Push To Existing Remote",      # 0
-            "Commit All, Push to New Remote",           # 1
-            "Add All, Commit, Push To Existing Remote", # 2
-            "Add All, Commit, Push to New Remote",      # 3
-            "Commit Staged, Push To Existing Remote",   # 4
-            "Commit Staged, Push to New Remote",        # 5
-            "Commit Only",                              # 6
-            "Main Menu",                                # 7
-            "Exit",                                     # 8
-        ]
-        optionInt = getResponse(options, 2)
+        if optionTwo is not None:
+            optionInt = optionTwo
+        else:
+            options = [
+                "Commit All, Push To Existing Remote",      # 0
+                "Commit All, Push to New Remote",           # 1
+                "Add All, Commit, Push To Existing Remote", # 2
+                "Add All, Commit, Push to New Remote",      # 3
+                "Commit Staged, Push To Existing Remote",   # 4
+                "Commit Staged, Push to New Remote",        # 5
+                "Commit Only",                              # 6
+                "Main Menu",                                # 7
+                "Exit",                                     # 8
+            ]
+            optionInt = getResponse(options, 2)
         if optionInt == 0:
-            commitAll()
-            push()
-            afterPush(repo, taskBranch)
+            if commitAll():
+                push()
+                afterPush(repo, taskBranch)
         elif optionInt == 1:
-            commitAll()
-            push(["--set-upstream", "origin", taskBranch])
-            afterPush(repo, taskBranch)
+            if commitAll():
+                push(["--set-upstream", "origin", taskBranch])
+                afterPush(repo, taskBranch)
         if optionInt == 2:
             addAll()
-            commit()
-            push()
-            afterPush(repo, taskBranch)
+            if commit():
+                push()
+                afterPush(repo, taskBranch)
         elif optionInt == 3:
             addAll()
-            commit()
-            push(["--set-upstream", "origin", taskBranch])
+            if commit():
+                push(["--set-upstream", "origin", taskBranch])
             afterPush(repo, taskBranch)
         if optionInt == 4:
-            commit()
-            push()
-            afterPush(repo, taskBranch)
+            if commit():
+                push()
+                afterPush(repo, taskBranch)
         elif optionInt == 5:
-            commit()
-            push(["--set-upstream", "origin", taskBranch])
-            afterPush(repo, taskBranch)
+            if commit():
+                push(["--set-upstream", "origin", taskBranch])
+                afterPush(repo, taskBranch)
         elif optionInt == 6:
-            commit()
-            pushOption(repo, taskBranch)
+            if commit():
+                pushOption(repo, taskBranch)
         elif optionInt == 7:
             main(repo)
         elif optionInt == 8:
@@ -603,10 +649,21 @@ def main(repo):
             print_("You must start from branch: {0}".format(gMainBranch))
             return
         if optionInt in (0, 1, 20):
-            issue = input(" Issue/Task: ")
-            if not issue:
-                return
-            stepsBranch = "{}/{}".format(gStepsPrefix, issue)
+            if taskBranch.find(gStepsPrefix) == 0:
+                currentIssue = taskBranch[taskBranch.rfind("/") + 1:]
+                issue = input(" Issue/Task (0 for {}): {}/".format(currentIssue, gStepsPrefix))
+                if not issue:
+                    return
+                if issue == "0":
+                    stepsBranch = taskBranch
+                    issue = currentIssue
+                else:
+                    stepsBranch = "{}/{}".format(gStepsPrefix, issue)
+            else:
+                issue = input(" Issue/Task: {}/".format(gStepsPrefix))
+                if not issue:
+                    return
+                stepsBranch = "{}/{}".format(gStepsPrefix, issue)
         if optionInt == 0:
             stepsPath = os.path.join(repoPath, gStepsTemplate)
             c = "xcopy {} {}\\migration\\{}\\{} /i /k".format(
@@ -645,6 +702,9 @@ def main(repo):
         elif optionInt == 2:
             main(repo)
     elif optionInt == 5:
+        if taskBranch != gMainBranch:
+            checkout(gMainBranch)
+        pull()
         newBranch = input(" New Branch: ")
         checkout(["-b", newBranch])
         main(repo)
@@ -680,6 +740,8 @@ def selectRepo(useDefault=True):
     global gMainBranch
     global gSelectedDevHead
     global gSelectedMigration
+    optionOne = None
+    optionTwo = None
     with os.scandir(gLocalReposDir) as mydir:
         dirs = sorted(
             list(set([i.name for i in mydir if i.is_dir()]) - set(gExcludeReposList))
@@ -688,13 +750,23 @@ def selectRepo(useDefault=True):
         repo = gRepo = gDefaultRepo
     else:
         optionInt = getResponse(dirs, 1, " Choose Repository: ")
-        if optionInt == 1000:
+        if optionInt == 200:
+            if gShortcutRepo and gShortcutRepo in dirs:
+                repo = gShortcutRepo
+                gRepo = repo
+                optionOne = 0
+                optionTwo = 0
+            else:
+                print_("Repo {} not found.".format(gShortcutRepo))
+                return
+        elif optionInt == 1000:
             return
-        try:
-            repo = dirs[optionInt]
-        except:
-            raise Exception(" Invalid Selection.")
-        gRepo = "{} ({})".format(repo, optionInt)
+        else:
+            try:
+                repo = dirs[optionInt]
+            except:
+                raise Exception(" Invalid Selection.")
+            gRepo = "{} ({})".format(repo, optionInt)
     repoPath = os.path.join(gLocalReposDir, repo)
     os.chdir(repoPath)
 
@@ -713,7 +785,7 @@ def selectRepo(useDefault=True):
     else:
         gSelectedMigration = gMigrationFolder
 
-    main(repo)
+    main(repo, optionOne, optionTwo)
 
 
 # load global settings from config file
@@ -728,6 +800,7 @@ with open(path, "r") as json_config_file:
 gBitBucketOrg = configData["bitBucketOrg"]
 gLocalReposDir = configData["localReposDir"]
 gDefaultRepo = configData["defaultRepo"]
+gShortcutRepo = configData["shortcutRepo"]
 gExcludeReposList = configData["excludeRepos"]
 gReleasesList = configData["releases"]
 gDevHeadBranch = configData["devHeadBranch"]
@@ -740,6 +813,7 @@ gSpecificMainDev = configData["specificMainDev"]
 gSpecificDevHead = configData["specificDevHead"]
 gSpecificMigration = configData["specificMigration"]
 gMainProdBranch = configData["mainProdBranch"]
+gMessageHistory = configData["messageHistory"]
 gOutputToFile = configData["outputToFile"]
 gBranchPrefixes = configData["branchPrefixes"]
 gStepsPrefix = configData["stepsPrefix"]
@@ -753,13 +827,24 @@ gPull = ["git", "pull"]
 gPush = ["git", "push"]
 gAdd = ["git", "add"]
 gAddAll = ["git", "add", "--all"]
-gStashPatch = ["git", "stash", "--patch"]
+gMessageFile = None
 gOutputFile = None
+gMessages = []
+gMsgLinesStart = 0
+gMsgLinesEnd = 0
 gRepo = ""
 
 
 if gOutputToFile:
     gOutputFile = open("git-123.log", "a")
+
+fileName = "git-123.txt"
+path = os.path.join(os.getcwd(), fileName)
+
+if gMessageHistory and os.path.exists(fileName):
+    with open(path, 'r') as m:
+        gMessages = m.readlines()
+        gMsgLinesStart = len(gMessages)
 
 print_("\n" * 3 + "_" * 24)
 print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
@@ -768,6 +853,16 @@ selectRepo()
 
 print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
 print_("\nDone.\n")
+
+if gMessageHistory:
+    gMsgLinesEnd = len(gMessages)
+    if gMsgLinesEnd > gMsgLinesStart:
+        gMessageFile = open(path, "w")
+        for number, line in enumerate(gMessages):
+            if gMsgLinesEnd < 9 or number > gMsgLinesEnd - 10:
+                gMessageFile.write(line)
+        gMessageFile.close()
+
 try:
     exitcode, out, err = run_command(["git", "symbolic-ref", "--short", "HEAD"])
     taskBranch = out.strip()
