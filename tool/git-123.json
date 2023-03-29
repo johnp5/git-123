@@ -6,6 +6,7 @@
   "bitBucketOrg": "your_org",
   "localReposDir": "C:\\git",
   "defaultRepo": "",
+  "shortcutRepo": "abc",
   "devHeadBranch": "devhead",
   "mainDevBranch": "development",
   "migrationFolder": "sprint4200",
