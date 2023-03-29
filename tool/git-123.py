@@ -73,7 +73,7 @@ def print_indented(text, level=1):
             print_(indentation + line)
 
 
-def getResponse(options, level=1, message="    >>> "):
+def getResponse(options, level=1, message="    >>> ", returnInt=True):
     m = len(max(options, key=len))
     s = "-" * 16 + "-" * m
     print_indented("\n" + s, level)
@@ -92,21 +92,51 @@ def getResponse(options, level=1, message="    >>> "):
     try:
         optionInt = int(optionStr)
     except:
-        return 1000
+        if returnInt:
+            return 1000
+        else:
+            return 1000, ''
     if optionInt < 100:
         try:
             option = options[optionInt]
         except:
             raise Exception(" Invalid Selection.")
         print_(" Selected: {}".format(option))
-    return optionInt
+    if returnInt:
+        return optionInt
+    else:
+        return optionInt, option
+
+
+def selectMessage():
+    global gMessages
+    commitMessage = None
+    numLines = len(gMessages)
+    newMessage = False
+    if numLines > 0:
+        msgReversed = []
+        for m in reversed(gMessages):
+            msgReversed.append(m.strip("\n"))
+        msgReversed.append("-- [ New Message ]")
+        r, commitMessage = getResponse(msgReversed, 0, "Select Message:", False)
+        if r == numLines:
+            newMessage = True
+    else:
+        newMessage = True
+    if newMessage:
+        newMessage = False
+        commitMessage = input(" Commit Message: ")
+        if commitMessage:
+            gMessages.append(commitMessage + "\n")
+            newMessage = True
+    return commitMessage
 
 
 def commitAll(arg=None):
     if arg:
         commitMessage = arg
     else:
-        commitMessage = input(" Commit Message: ")
+        commitMessage = selectMessage()
     if commitMessage:
         c = gCommitAll[:]
         c.append(commitMessage)
@@ -121,7 +151,7 @@ def commit(arg=None):
     if arg:
         commitMessage = arg
     else:
-        commitMessage = input(" Commit Message: ")
+        commitMessage = selectMessage()
     if commitMessage:
         c = gCommit[:]
         c.append(commitMessage)
@@ -672,6 +702,9 @@ def main(repo, optionOne=None, optionTwo=None):
         elif optionInt == 2:
             main(repo)
     elif optionInt == 5:
+        if taskBranch != gMainBranch:
+            checkout(gMainBranch)
+        pull()
         newBranch = input(" New Branch: ")
         checkout(["-b", newBranch])
         main(repo)
@@ -780,6 +813,7 @@ gSpecificMainDev = configData["specificMainDev"]
 gSpecificDevHead = configData["specificDevHead"]
 gSpecificMigration = configData["specificMigration"]
 gMainProdBranch = configData["mainProdBranch"]
+gMessageHistory = configData["messageHistory"]
 gOutputToFile = configData["outputToFile"]
 gBranchPrefixes = configData["branchPrefixes"]
 gStepsPrefix = configData["stepsPrefix"]
@@ -793,13 +827,24 @@ gPull = ["git", "pull"]
 gPush = ["git", "push"]
 gAdd = ["git", "add"]
 gAddAll = ["git", "add", "--all"]
-gStashPatch = ["git", "stash", "--patch"]
+gMessageFile = None
 gOutputFile = None
+gMessages = []
+gMsgLinesStart = 0
+gMsgLinesEnd = 0
 gRepo = ""
 
 
 if gOutputToFile:
     gOutputFile = open("git-123.log", "a")
+
+fileName = "git-123.txt"
+path = os.path.join(os.getcwd(), fileName)
+
+if gMessageHistory and os.path.exists(fileName):
+    with open(path, 'r') as m:
+        gMessages = m.readlines()
+        gMsgLinesStart = len(gMessages)
 
 print_("\n" * 3 + "_" * 24)
 print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
@@ -808,6 +853,16 @@ selectRepo()
 
 print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
 print_("\nDone.\n")
+
+if gMessageHistory:
+    gMsgLinesEnd = len(gMessages)
+    if gMsgLinesEnd > gMsgLinesStart:
+        gMessageFile = open(path, "w")
+        for number, line in enumerate(gMessages):
+            if gMsgLinesEnd < 9 or number > gMsgLinesEnd - 10:
+                gMessageFile.write(line)
+        gMessageFile.close()
+
 try:
     exitcode, out, err = run_command(["git", "symbolic-ref", "--short", "HEAD"])
     taskBranch = out.strip()
