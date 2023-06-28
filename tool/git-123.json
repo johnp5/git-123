@@ -10,7 +10,17 @@
   "devHeadBranch": "devhead",
   "mainDevBranch": "development",
   "migrationFolder": "sprint4200",
-  "mainProdBranch": "master",
+  "mainProdBranch": "main",
+  "databases": {
+      "db1": [
+        "abc",
+        "abc-scripts"
+      ],
+      "db2": [
+        "lma",
+        "lma-scripts"
+      ]
+  },
   "specificDevHead": {
       "lma": "lmadev"
   },
@@ -29,7 +39,7 @@
   "releases": [
     "4.1.0.0"
   ],
-  "outputToFile": true,
-  "stepsPrefix": "issue",
-  "stepsTemplate": "migration\\template"
+  "messageHistory": false,
+  "outputToFile": false,
+  "stepsPrefix": "issue"
 }
