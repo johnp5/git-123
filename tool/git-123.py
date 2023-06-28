@@ -123,6 +123,8 @@ def getResponse(options, level=1, message="    >>> ", returnInt=True):
     optionStr = input(message)
     if optionStr == "00":
         return 200
+    elif optionStr == "130":
+        return 300
     try:
         optionInt = int(optionStr)
     except:
@@ -152,14 +154,14 @@ def selectMessage():
         msgReversed.append("-- [ New Message ]")
         for m in reversed(gMessages):
             msgReversed.append(m.strip("\n"))
-        r, commitMessage = getResponse(msgReversed, 0, "Select Message:", False)
+        r, commitMessage = getResponse(msgReversed, 0, ">>> ", False)
         if r == 0:
             newMessage = True
     else:
         newMessage = True
     if newMessage:
         newMessage = False
-        commitMessage = input(" Commit Message: ")
+        commitMessage = input("\n   Commit Message: ")
         if commitMessage:
             gMessages.append(commitMessage + "\n")
             newMessage = True
@@ -263,11 +265,15 @@ def checkout_fetch_pull(taskBranch):
     git_cmd["pull"]()
 
 
-def checkout_devhead_pull(taskBranch):
+def checkout_devhead_pull(taskBranch, option=0, mainBranch=False):
     if taskBranch != gSelectedDevHead:
         git_cmd["checkout"](gSelectedDevHead)
     git_cmd["pull"]()
     git_cmd["checkout"](gMainBranch)
+    if mainBranch:
+        git_cmd["pull"]()
+    if option > 100:
+        git_cmd["checkout"](taskBranch)
 
 
 def get_key(d, value):
@@ -325,7 +331,11 @@ def merge_into_devhead(repo, taskBranch, databaseItems=None):
     ]
     optionInt = getResponse(options)
     if optionInt < 2:
-        git_cmd["checkout"](gSelectedDevHead)
+        try:
+            git_cmd["checkout"](gSelectedDevHead)
+        except:
+            print(f"\n  ** Error checking out {gSelectedDevHead} **\n")
+            return
 
     if optionInt == 0:
         git_cmd["merge"](taskBranch)
@@ -429,25 +439,44 @@ def afterPush(repo, taskBranch, databaseItems=None):
         elif optionInt == 3:
             pass
 
+def trackingRemote(taskBranch, indent=0):
+    exitcode, out, err = run_command(["git", "branch", "-vv"])
+    lines = out.splitlines()
+    remoteBranch = f"[origin/{taskBranch}"
+    remoteBranches = [
+        line.split(None, 2)[2]
+        for line in lines
+        if f"{remoteBranch}]" in line or f"{remoteBranch}:" in line
+    ]
+    print_()
+    for branch in remoteBranches:
+        msg = f"Tracking: {branch}"
+        remote = "Existing"
+    if not remoteBranches:
+        msg = "Not tracking remote."
+        remote = "New"
+    print_indented("-" * len(msg), indent)
+    print_indented(msg, indent)
+    return remote
+
 
 def pushOption(repo, taskBranch):
+    remote = trackingRemote(taskBranch, 1)
     options = [
-        "Push to Existing", # 0
-        "Push to New",      # 1
-        "Main Menu",        # 2
-        "Exit",             # 3
+        "Push",      # 0
+        "Main Menu", # 1
+        "Exit",      # 2
     ]
     optionInt = getResponse(options)
-
     if optionInt == 0:
-        git_cmd["push"]()
+        if remote == "Existing":
+            git_cmd["push"]()
+        elif remote == "New":
+            git_cmd["push"](["--set-upstream", "origin", taskBranch])
         afterPush(repo, taskBranch)
     elif optionInt == 1:
-        git_cmd["push"](["--set-upstream", "origin", taskBranch])
-        afterPush(repo, taskBranch)
-    elif optionInt == 2:
         main(repo)
-    elif optionInt == 3:
+    elif optionInt == 2:
         pass
 
 
@@ -572,50 +601,38 @@ def main(repo, optionOne=None, optionTwo=None):
         if optionTwo is not None:
             optionInt = optionTwo
         else:
+            remote = trackingRemote(taskBranch, 2)
             options = [
-                "Commit All, Push To Existing Remote",      # 0
-                "Commit All, Push to New Remote",           # 1
-                "Add All, Commit, Push To Existing Remote", # 2
-                "Add All, Commit, Push to New Remote",      # 3
-                "Commit Staged, Push To Existing Remote",   # 4
-                "Commit Staged, Push to New Remote",        # 5
-                "Commit Only",                              # 6
-                "Main Menu",                                # 7
-                "Exit",                                     # 8
+                f"Commit Tracked, Push",  # 0
+                f"Commit Staged, Push",   # 1
+                f"Add All, Commit, Push", # 2
+                "Commit Staged",          # 3
+                "Main Menu",              # 4
+                "Exit",                   # 5
             ]
             optionInt = getResponse(options, 2)
         if optionInt == 0:
             if git_cmd["commitAll"]():
-                git_cmd["push"]()
+                if remote == "Existing":
+                    git_cmd["push"]()
+                elif remote == "New":
+                    git_cmd["push"](["--set-upstream", "origin", taskBranch])    
                 afterPush(repo, taskBranch, databaseItems)
-        elif optionInt == 1:
-            if git_cmd["commitAll"]():
-                git_cmd["push"](["--set-upstream", "origin", taskBranch])
-                afterPush(repo, taskBranch, databaseItems)
-        if optionInt == 2:
+        elif optionInt == 2:
             git_cmd["addAll"]()
+        if optionInt in (1, 2):
             if git_cmd["commit"]():
-                git_cmd["push"]()
+                if remote == "Existing":
+                    git_cmd["push"]()
+                elif remote == "New":
+                    git_cmd["push"](["--set-upstream", "origin", taskBranch])    
                 afterPush(repo, taskBranch, databaseItems)
         elif optionInt == 3:
-            git_cmd["addAll"]()
-            if git_cmd["commit"]():
-                git_cmd["push"](["--set-upstream", "origin", taskBranch])
-            afterPush(repo, taskBranch, databaseItems)
-        if optionInt == 4:
-            if git_cmd["commit"]():
-                git_cmd["push"]()
-                afterPush(repo, taskBranch, databaseItems)
-        elif optionInt == 5:
-            if git_cmd["commit"]():
-                git_cmd["push"](["--set-upstream", "origin", taskBranch])
-                afterPush(repo, taskBranch, databaseItems)
-        elif optionInt == 6:
             if git_cmd["commit"]():
                 pushOption(repo, taskBranch)
-        elif optionInt == 7:
+        elif optionInt == 4:
             main(repo)
-        elif optionInt == 8:
+        elif optionInt == 5:
             pass
     elif optionInt == 1:
         options = [
@@ -702,15 +719,16 @@ def main(repo, optionOne=None, optionTwo=None):
         elif optionInt == 5:
             main(repo)
     elif optionInt == 2:
+        remote = trackingRemote(taskBranch, 2)
         options = [
             f"Fetch, Prune & Pull (must be on {gMainBranch})", # 0
-            "Fetch & Prune Origin",     # 1
-            "Pull",                     # 2
-            f"Pull {gSelectedDevHead}", # 3
-            "Push to Existing",         # 4
-            "Push to New",              # 5
-            "Main Menu",                # 6
-            "Exit",                     # 7
+            "Fetch & Prune Origin",                            # 1
+            "Pull",                                            # 2
+            f"Pull {gSelectedDevHead}",                        # 3
+            f"Pull {gSelectedDevHead} & {gMainBranch}",        # 4
+            "Push",                                            # 5
+            "Main Menu",                                       # 6
+            "Exit",                                            # 7
         ]
         optionInt = getResponse(options, 2)
         if optionInt == 0:
@@ -728,14 +746,17 @@ def main(repo, optionOne=None, optionTwo=None):
         elif optionInt == 2:
             git_cmd["pull"]()
             main(repo)
-        elif optionInt == 3:
-            checkout_devhead_pull(taskBranch)
+        elif optionInt in (3, 303):
+            checkout_devhead_pull(taskBranch, optionInt)
             main(repo)
-        elif optionInt == 4:
-            git_cmd["push"]()
+        elif optionInt in (4, 404):
+            checkout_devhead_pull(taskBranch, optionInt, True)
             main(repo)
         elif optionInt == 5:
-            git_cmd["push"](["--set-upstream", "origin", taskBranch])
+            if remote == "Existing":
+                git_cmd["push"]()
+            elif remote == "New":
+                git_cmd["push"](["--set-upstream", "origin", taskBranch])    
             main(repo)
         elif optionInt == 6:
             main(repo)
@@ -744,20 +765,23 @@ def main(repo, optionOne=None, optionTwo=None):
 
     elif optionInt == 3:
         print_indented(f"({gSelectedMigration})", 2)
-        options = [
-            "Steps File - Copy & Commit", # 0
-            "Steps File - Commit Only",   # 1
-            "Main Menu",                  # 2
-            "Exit",                       # 3
-        ]
-        optionInt = getResponse(options, 2)
+        if optionTwo is not None:
+            optionInt = optionTwo
+        else:
+            options = [
+                "Steps File - Copy & Commit", # 0
+                "Steps File - Commit Only",   # 1
+                "Main Menu",                  # 2
+                "Exit",                       # 3
+            ]
+            optionInt = getResponse(options, 2)
         if optionInt == 20 and taskBranch != gMainBranch:
             print_(f"You must start from branch: {gMainBranch}")
             return
         if optionInt in (0, 1, 20):
             if taskBranch.find(gStepsPrefix) == 0:
                 currentIssue = taskBranch[taskBranch.rfind("/") + 1 :]
-                issue = input(f" Issue/Task (0 for {currentIssue}): {gStepsPrefix}/")
+                issue = input(f"\n   Issue/Task (0 for {currentIssue}): {gStepsPrefix}/")
                 if not issue:
                     return
                 if issue == "0":
@@ -775,7 +799,7 @@ def main(repo, optionOne=None, optionTwo=None):
                 raise Exception(" Steps not found.")
             c = f'xcopy "{gStepsPath}" "{repoPath}\\migration\\{gSelectedMigration}\\{issue}" /f /i /k'
             os.system(c)
-            x = input(" Modify file as needed. Press 0 to continue.")
+            x = input(" Modify file as needed. Press 0 to continue...")
             if x in ("0", "00", "10"):
                 commitSteps(repo, taskBranch, stepsBranch, gSelectedMigration, issue, x)
         elif optionInt == 1:
@@ -866,6 +890,15 @@ def selectRepo(useDefault=True):
             else:
                 print_(f"Repo {gShortcutRepo} not found.")
                 return
+        if optionInt == 300:
+            if gShortcutRepoMigration and gShortcutRepoMigration in dirs:
+                repo = gShortcutRepoMigration
+                gRepo = repo
+                optionOne = 3
+                optionTwo = 0
+            else:
+                print_(f"Repo {gShortcutRepoMigration} not found.")
+                return
         elif optionInt == 1000:
             return
         else:
@@ -911,6 +944,7 @@ gDatabase = ""
 gLocalReposDir = configData["localReposDir"]
 gDefaultRepo = configData["defaultRepo"]
 gShortcutRepo = configData["shortcutRepo"]
+gShortcutRepoMigration = configData["shortcutRepoMigration"]
 gExcludeReposList = configData["excludeRepos"]
 gReleasesList = configData["releases"]
 gDevHeadBranch = configData["devHeadBranch"]
