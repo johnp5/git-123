@@ -450,14 +450,12 @@ def trackingRemote(taskBranch, indent=0):
     ]
     print_()
     for branch in remoteBranches:
-        msg = f"Tracking: {branch}"
-        remote = "Existing"
+        msg = f"Remote: {branch}"
     if not remoteBranches:
-        msg = "Not tracking remote."
-        remote = "New"
+        msg = "No remote."
     print_indented("-" * len(msg), indent)
     print_indented(msg, indent)
-    return remote
+    return msg[:1]
 
 
 def pushOption(repo, taskBranch):
@@ -469,9 +467,9 @@ def pushOption(repo, taskBranch):
     ]
     optionInt = getResponse(options)
     if optionInt == 0:
-        if remote == "Existing":
+        if remote == "R":
             git_cmd["push"]()
-        elif remote == "New":
+        elif remote == "N":
             git_cmd["push"](["--set-upstream", "origin", taskBranch])
         afterPush(repo, taskBranch)
     elif optionInt == 1:
@@ -598,10 +596,10 @@ def main(repo, optionOne=None, optionTwo=None):
         optionInt = getResponse(options)
 
     if optionInt == 0:
+        remote = trackingRemote(taskBranch, 2)
         if optionTwo is not None:
             optionInt = optionTwo
         else:
-            remote = trackingRemote(taskBranch, 2)
             options = [
                 f"Commit Tracked, Push",  # 0
                 f"Commit Staged, Push",   # 1
@@ -613,18 +611,18 @@ def main(repo, optionOne=None, optionTwo=None):
             optionInt = getResponse(options, 2)
         if optionInt == 0:
             if git_cmd["commitAll"]():
-                if remote == "Existing":
+                if remote == "R":
                     git_cmd["push"]()
-                elif remote == "New":
+                elif remote == "N":
                     git_cmd["push"](["--set-upstream", "origin", taskBranch])    
                 afterPush(repo, taskBranch, databaseItems)
         elif optionInt == 2:
             git_cmd["addAll"]()
         if optionInt in (1, 2):
             if git_cmd["commit"]():
-                if remote == "Existing":
+                if remote == "R":
                     git_cmd["push"]()
-                elif remote == "New":
+                elif remote == "N":
                     git_cmd["push"](["--set-upstream", "origin", taskBranch])    
                 afterPush(repo, taskBranch, databaseItems)
         elif optionInt == 3:
@@ -753,9 +751,9 @@ def main(repo, optionOne=None, optionTwo=None):
             checkout_devhead_pull(taskBranch, optionInt, True)
             main(repo)
         elif optionInt == 5:
-            if remote == "Existing":
+            if remote == "R":
                 git_cmd["push"]()
-            elif remote == "New":
+            elif remote == "N":
                 git_cmd["push"](["--set-upstream", "origin", taskBranch])    
             main(repo)
         elif optionInt == 6:
@@ -764,7 +762,9 @@ def main(repo, optionOne=None, optionTwo=None):
             pass
 
     elif optionInt == 3:
-        print_indented(f"({gSelectedMigration})", 2)
+        migration = f"({gSelectedMigration})"
+        print_indented("-" * len(migration), 2)
+        print_indented(migration, 2)
         if optionTwo is not None:
             optionInt = optionTwo
         else:
@@ -890,7 +890,7 @@ def selectRepo(useDefault=True):
             else:
                 print_(f"Repo {gShortcutRepo} not found.")
                 return
-        if optionInt == 300:
+        elif optionInt == 300:
             if gShortcutRepoMigration and gShortcutRepoMigration in dirs:
                 repo = gShortcutRepoMigration
                 gRepo = repo
