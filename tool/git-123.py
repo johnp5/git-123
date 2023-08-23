@@ -527,8 +527,8 @@ def remoteGone(taskBranch):
     elif optionInt == 1:
         for b in goneBranches:
             options = [
-                f"Delete {branch}", # 0
-                "Skip",             # 1
+                f"Delete {b}", # 0
+                "Skip",        # 1
             ]
             optionInt = getResponse(options)
             if optionInt == 0:
@@ -724,9 +724,10 @@ def main(repo, optionOne=None, optionTwo=None):
             "Pull",                                            # 2
             f"Pull {gSelectedDevHead}",                        # 3
             f"Pull {gSelectedDevHead} & {gMainBranch}",        # 4
-            "Push",                                            # 5
-            "Main Menu",                                       # 6
-            "Exit",                                            # 7
+            f"Pull {gMainBranch}",                             # 5
+            "Push",                                            # 6
+            "Main Menu",                                       # 7
+            "Exit",                                            # 8
         ]
         optionInt = getResponse(options, 2)
         if optionInt == 0:
@@ -750,15 +751,22 @@ def main(repo, optionOne=None, optionTwo=None):
         elif optionInt in (4, 404):
             checkout_devhead_pull(taskBranch, optionInt, True)
             main(repo)
-        elif optionInt == 5:
+        elif optionInt in (5, 505):
+            if taskBranch != gMainBranch:
+                git_cmd["checkout"](gMainBranch)
+            git_cmd["pull"]()
+            if optionInt > 100:
+                git_cmd["checkout"](taskBranch)
+            main(repo)
+        elif optionInt == 6:
             if remote == "R":
                 git_cmd["push"]()
             elif remote == "N":
                 git_cmd["push"](["--set-upstream", "origin", taskBranch])    
             main(repo)
-        elif optionInt == 6:
-            main(repo)
         elif optionInt == 7:
+            main(repo)
+        elif optionInt == 8:
             pass
 
     elif optionInt == 3:
