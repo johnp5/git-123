@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 class RunCommandException(Exception):
-    """Exception raised by run_command when exitcode is non-zero.
+    """Exception raised by RunCommand when exitcode is non-zero.
 
     Attributes:
         exitcode -- code returned by the process
@@ -21,7 +21,7 @@ class RunCommandException(Exception):
         self.err = err
 
 
-def runSqlCommand(sqlCommand, connectString):
+def RunSqlCommand(sqlCommand, connectString):
     global subprocess
     out = None
     err = None
@@ -46,17 +46,17 @@ def runSqlCommand(sqlCommand, connectString):
         return exitcode, outStr, errStr
 
 
-def sqlCommand(filePaths, schema, db):
+def SqlCommand(filePaths, schema, db):
     file_paths_str = " ".join(filePaths)
     sqlCommandStr = f"set define off;\r\nset serveroutput on;\r\n@{file_paths_str};\r\nshow errors;\r\nexit;"
     sqlCommand = sqlCommandStr.encode()
     connectString = f"{schema}/{db}@{db}"
     print(f"Running {file_paths_str} as {connectString}")
-    exitCode, queryResult, errorMessage = runSqlCommand(sqlCommand, connectString)
+    exitCode, queryResult, errorMessage = RunSqlCommand(sqlCommand, connectString)
     print(queryResult)
 
 
-def run_command(arr, input=None):
+def RunCommand(arr, input=None):
     # Stack Overflow: https://stackoverflow.com/questions/1996518/retrieving-the-output-of-subprocess-call
     # Note, Out and Err are buffered in memory, so do not use this method if
     # the data size is large or unlimited.
@@ -83,7 +83,7 @@ def run_command(arr, input=None):
         return exitcode, outStr, errStr
 
 
-def print_(text=None):
+def Print_(text=None):
     global gOutputToFile
     global gOutputFile
     if text:
@@ -97,7 +97,7 @@ def print_(text=None):
             print(file=gOutputFile)
 
 
-def print_indented(text, level=1):
+def PrintIndented(text, level=1):
     indentation = ""
     for i in range(0, level):
         indentation += "    "
@@ -106,20 +106,20 @@ def print_indented(text, level=1):
 
     for line in lines:
         if line:
-            print_(indentation + line)
+            Print_(indentation + line)
 
 
-def getResponse(options, level=1, message="    >>> ", returnInt=True):
+def GetResponse(options, level=1, message="    >>> ", returnInt=True):
     m = len(max(options, key=len))
     s = "-" * 16 + "-" * m
-    print_indented("\n" + s, level)
+    PrintIndented("\n" + s, level)
     for x in range(len(options)):
         l = len(options[x])
         p = "-" * (m - l + 3)
         if x > 9:
             p = "-" * (m - l + 1)
-        print_indented(f"-> {str(x)} - {options[x]} {p} {str(x)} <-", level)
-    print_indented(s + "\n", level)
+        PrintIndented(f"-> {str(x)} - {options[x]} {p} {str(x)} <-", level)
+    PrintIndented(s + "\n", level)
     optionStr = input(message)
     if optionStr == "00":
         return 200
@@ -137,14 +137,14 @@ def getResponse(options, level=1, message="    >>> ", returnInt=True):
             option = options[optionInt]
         except:
             raise Exception(" Invalid Selection.")
-        print_(f" Selected: {option}")
+        Print_(f" Selected: {option}")
     if returnInt:
         return optionInt
     else:
         return optionInt, option
 
 
-def selectMessage():
+def SelectMessage():
     global gMessages
     commitMessage = None
     numLines = len(gMessages)
@@ -154,7 +154,7 @@ def selectMessage():
         msgReversed.append("-- [ New Message ]")
         for m in reversed(gMessages):
             msgReversed.append(m.strip("\n"))
-        r, commitMessage = getResponse(msgReversed, 0, ">>> ", False)
+        r, commitMessage = GetResponse(msgReversed, 0, ">>> ", False)
         if r == 0:
             newMessage = True
     else:
@@ -168,7 +168,7 @@ def selectMessage():
     return commitMessage
 
 
-def git_commands(
+def GitCommands(
     gitAddAll,
     gitAdd,
     gitCommitAll,
@@ -180,70 +180,75 @@ def git_commands(
     gitPush,
 ):
     def addAll():
-        print_("Add all")
+        Print_("Add all")
         command = gitAddAll[:]
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     def add(arg):
-        print_(f"Add {arg}")
+        Print_(f"Add {arg}")
         command = gitAdd[:]
         command.append(arg)
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     def checkout(branch):
-        print_(f"Checkout {branch}")
+        Print_(f"Checkout {branch}")
+        branchType = type(branch)
         command = gitCheckout[:]
-        command.append(branch)
-        exitcode, out, err = run_command(command)
-        print_(out)
+        if branchType is str:
+            command.append(branch)
+        elif branchType is list:
+            command += branch
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     def commitAll(arg=None):
-        commitMessage = arg or selectMessage()
+        commitMessage = arg or SelectMessage()
         if not commitMessage:
             return False
         command = gitCommitAll[:]
         command.append(commitMessage)
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
         return True
 
+
     def commit(arg=None):
-        commitMessage = arg or selectMessage()
+        commitMessage = arg or SelectMessage()
         if not commitMessage:
             return False
         command = gitCommit[:]
         command.append(commitMessage)
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
         return True
 
     def fetch(arg=None):
-        print_("Fetch...")
+        Print_("Fetch...")
         command = gitFetch[:] + arg if arg else gitFetch
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     def merge(arg):
-        print_(f"Merge {arg}")
+        Print_(f"Merge {arg}")
         command = gitMerge[:]
         command.append(arg)
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     def pull(arg=None):
-        print_("Pull...")
+        Print_("Pull...")
         command = gitPull[:] + arg if arg else gitPull
-        exitcode, out, err = run_command(command)
-        print_(out)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     def push(arg=None):
         m = "Push to New..." if arg else "Push..."
         command = gitPush[:] + arg if arg else gitPush
-        print_(m)
-        exitcode, out, err = run_command(command)
-        print_(out)
+        Print_(m)
+        exitcode, out, err = RunCommand(command)
+        Print_(out)
 
     return {
         "addAll": addAll,
@@ -258,25 +263,25 @@ def git_commands(
     }
 
 
-def checkout_fetch_pull(taskBranch):
+def CheckoutFetchPull(taskBranch):
     if taskBranch != gMainBranch:
-        git_cmd["checkout"](gMainBranch)
-    git_cmd["fetch"](["--prune", "origin"])
-    git_cmd["pull"]()
+        gitCmd["checkout"](gMainBranch)
+    gitCmd["fetch"](["--prune", "origin"])
+    gitCmd["pull"]()
 
 
-def checkout_devhead_pull(taskBranch, option=0, mainBranch=False):
+def CheckoutDevheadPull(taskBranch, option=0, mainBranch=False):
     if taskBranch != gSelectedDevHead:
-        git_cmd["checkout"](gSelectedDevHead)
-    git_cmd["pull"]()
-    git_cmd["checkout"](gMainBranch)
+        gitCmd["checkout"](gSelectedDevHead)
+    gitCmd["pull"]()
+    gitCmd["checkout"](gMainBranch)
     if mainBranch:
-        git_cmd["pull"]()
+        gitCmd["pull"]()
     if option > 100:
-        git_cmd["checkout"](taskBranch)
+        gitCmd["checkout"](taskBranch)
 
 
-def get_key(d, value):
+def GetKey(d, value):
     for k, v in d.items():
         for r in v:
             if r == value:
@@ -284,24 +289,24 @@ def get_key(d, value):
     return f"No DB set for {value}"
 
 
-def compile(repo, databaseItems):
+def Compile(repo, databaseItems):
     if not databaseItems:
-        print_indented("**   No items to compile")
+        PrintIndented("**   No items to compile")
         return
     for schema, dbFiles in databaseItems.items():
         print(schema)
         for d in dbFiles:
             print(d)
-    print_()
+    Print_()
     options = [
         "Compile All",          # 0
         "Compile Individually", # 1
         "Return",               # 2
     ]
-    optionInt = getResponse(options, 2)
+    optionInt = GetResponse(options, 2)
     if optionInt == 0:
         for schema, dbFiles in databaseItems.items():
-            sqlCommand(dbFiles, schema, gDatabase)
+            SqlCommand(dbFiles, schema, gDatabase)
     elif optionInt == 1:
         for schema, dbFiles in databaseItems.items():
             for filePath in dbFiles:
@@ -309,16 +314,16 @@ def compile(repo, databaseItems):
                     f"Compile {filePath}", # 0
                     "Skip",                # 1
                 ]
-                optionInt = getResponse(options, 3)
+                optionInt = GetResponse(options, 3)
                 if optionInt == 0:
-                    sqlCommand([filePath], schema, gDatabase)
+                    SqlCommand([filePath], schema, gDatabase)
                 elif optionInt == 1:
                     pass
     elif optionInt == 2:
         pass
 
 
-def merge_into_devhead(repo, taskBranch, databaseItems=None):
+def MergeIntoDevhead(repo, taskBranch, databaseItems=None):
     if taskBranch == gSelectedDevHead:
         raise Exception(
             f"You cannot run this from {gSelectedDevHead}."
@@ -329,19 +334,19 @@ def merge_into_devhead(repo, taskBranch, databaseItems=None):
         "Pull & Merge", # 1
         "Exit",         # 2
     ]
-    optionInt = getResponse(options)
+    optionInt = GetResponse(options)
     if optionInt < 2:
         try:
-            git_cmd["checkout"](gSelectedDevHead)
+            gitCmd["checkout"](gSelectedDevHead)
         except:
             print(f"\n  ** Error checking out {gSelectedDevHead} **\n")
             return
 
     if optionInt == 0:
-        git_cmd["merge"](taskBranch)
+        gitCmd["merge"](taskBranch)
     elif optionInt == 1:
-        git_cmd["pull"]()
-        git_cmd["merge"](taskBranch)
+        gitCmd["pull"]()
+        gitCmd["merge"](taskBranch)
     elif optionInt == 2:
         return
 
@@ -351,10 +356,10 @@ def merge_into_devhead(repo, taskBranch, databaseItems=None):
         "Abort Merge",              # 2
         "Exit",                     # 3
     ]
-    optionInt = getResponse(options)
+    optionInt = GetResponse(options)
 
     if optionInt == 0:
-        git_cmd["push"]()
+        gitCmd["push"]()
         num_values = str(len(databaseItems.values()))
 
         options = [
@@ -362,45 +367,45 @@ def merge_into_devhead(repo, taskBranch, databaseItems=None):
             f"Compile ({num_values})", # 1
             "Exit",                    # 2
         ]
-        optionInt = getResponse(options)
+        optionInt = GetResponse(options)
 
         if optionInt == 0:
-            git_cmd["checkout"](taskBranch)
+            gitCmd["checkout"](taskBranch)
             options = [
                 "Open in BitBucket", # 0
                 "Exit",              # 1
             ]
-            optionInt = getResponse(options)
+            optionInt = GetResponse(options)
 
             if optionInt == 0:
                 url = "https://bitbucket.org/{}/{}/branch/{}".format(
                     gBitBucketOrg, repo, taskBranch
                 )
-                print_("Opening Branch...")
+                Print_("Opening Branch...")
                 webbrowser.open(url)
             elif optionInt == 1:
                 return
         elif optionInt == 1:
-            compile(repo, databaseItems)
+            Compile(repo, databaseItems)
             options = [
                 f"Back to {taskBranch}", # 0
                 "Exit",                  # 1
             ]
-            optionInt = getResponse(options)
+            optionInt = GetResponse(options)
 
             if optionInt == 0:
-                git_cmd["checkout"](taskBranch)
+                gitCmd["checkout"](taskBranch)
                 options = [
                     "Open in BitBucket", # 0
                     "Exit",              # 1
                 ]
-                optionInt = getResponse(options)
+                optionInt = GetResponse(options)
 
                 if optionInt == 0:
                     url = "https://bitbucket.org/{}/{}/branch/{}".format(
                         gBitBucketOrg, repo, taskBranch
                     )
-                    print_("Opening Branch...")
+                    Print_("Opening Branch...")
                     webbrowser.open(url)
                 elif optionInt == 1:
                     return
@@ -409,14 +414,14 @@ def merge_into_devhead(repo, taskBranch, databaseItems=None):
         elif optionInt == 2:
             return
     elif optionInt == 1:
-        git_cmd["checkout"](taskBranch)
+        gitCmd["checkout"](taskBranch)
     elif optionInt == 2:
-        git_cmd["merge"]("--abort")
+        gitCmd["merge"]("--abort")
     elif optionInt == 3:
         pass
 
 
-def afterPush(repo, taskBranch, databaseItems=None):
+def AfterPush(repo, taskBranch, databaseItems=None):
     if taskBranch != gSelectedDevHead:
         options = [
             f"Merge into {gSelectedDevHead}", # 0
@@ -424,23 +429,23 @@ def afterPush(repo, taskBranch, databaseItems=None):
             "Main Menu",                      # 2
             "Exit",                           # 3
         ]
-        optionInt = getResponse(options)
+        optionInt = GetResponse(options)
 
         if optionInt == 0:
-            merge_into_devhead(repo, taskBranch, databaseItems)
+            MergeIntoDevhead(repo, taskBranch, databaseItems)
         elif optionInt == 1:
             url = "https://bitbucket.org/{}/{}/branch/{}".format(
                 gBitBucketOrg, repo, taskBranch
             )
-            print_("Opening Branch...")
+            Print_("Opening Branch...")
             webbrowser.open(url)
         elif optionInt == 2:
-            main(repo)
+            Main(repo)
         elif optionInt == 3:
             pass
 
-def trackingRemote(taskBranch, indent=0):
-    exitcode, out, err = run_command(["git", "branch", "-vv"])
+def TrackingRemote(taskBranch, indent=0):
+    exitcode, out, err = RunCommand(["git", "branch", "-vv"])
     lines = out.splitlines()
     remoteBranch = f"[origin/{taskBranch}"
     remoteBranches = [
@@ -448,99 +453,135 @@ def trackingRemote(taskBranch, indent=0):
         for line in lines
         if f"{remoteBranch}]" in line or f"{remoteBranch}:" in line
     ]
-    print_()
+    Print_()
     for branch in remoteBranches:
         msg = f"Remote: {branch}"
     if not remoteBranches:
         msg = "No remote."
-    print_indented("-" * len(msg), indent)
-    print_indented(msg, indent)
+    PrintIndented("-" * len(msg), indent)
+    PrintIndented(msg, indent)
     return msg[:1]
 
 
-def pushOption(repo, taskBranch):
-    remote = trackingRemote(taskBranch, 1)
+def PushOption(repo, taskBranch):
+    remote = TrackingRemote(taskBranch, 1)
     options = [
         "Push",      # 0
         "Main Menu", # 1
         "Exit",      # 2
     ]
-    optionInt = getResponse(options)
+    optionInt = GetResponse(options)
     if optionInt == 0:
-        if remote == "R":
-            git_cmd["push"]()
-        elif remote == "N":
-            git_cmd["push"](["--set-upstream", "origin", taskBranch])
-        afterPush(repo, taskBranch)
+        PushToRemote(remote, taskBranch)
+        AfterPush(repo, taskBranch)
     elif optionInt == 1:
-        main(repo)
+        Main(repo)
     elif optionInt == 2:
         pass
 
 
-def commitSteps(repo, taskBranch, stepsBranch, migration, issue, x="0"):
+def PushToRemote(remote, taskBranch):
+    if remote == "R":
+        gitCmd["push"]()
+    elif remote == "N":
+        gitCmd["push"](["--set-upstream", "origin", taskBranch])    
+
+
+def GetLocalBranches():
+    exitcode, out, err = RunCommand(["git", "branch"])
+    lines = out.splitlines()
+    localLines = [l.strip() for l in lines]
+    branchesList = []
+    for p in gBranchPrefixes:
+        for l in localLines:
+            if l.find(p) == 0:
+                branchesList.append(l)
+    return branchesList
+
+
+def CommitSteps(repo, taskBranch, stepsBranch, migration, issue, x="0"):
+    # - "0":
+    #   - Performs a pull on the main branch.
+    #   - Displays push options.
+    # - "10", "00":
+    #   - "10": Performs a pull on the main branch.
+    #   - Pushes to remote branch.
+    #   - Opens the branch in Bitbucket.
     if taskBranch != stepsBranch:
-        if taskBranch != gMainBranch:
-            git_cmd["checkout"](gMainBranch)
-        if x in ("0", "10"):
-            git_cmd["pull"]()
-        git_cmd["checkout"](["-b", stepsBranch])
+        branchesList = GetLocalBranches()
+        if stepsBranch in branchesList:
+            gitCmd["checkout"](stepsBranch)
+        elif taskBranch != gMainBranch:
+            gitCmd["checkout"](gMainBranch)
+            taskBranch = gMainBranch
+        if taskBranch == gMainBranch:
+            if x in ("0", "10"):
+                gitCmd["pull"]()
+            gitCmd["checkout"](["-b", stepsBranch])
     addFile = f"migration\\{migration}\\{issue}\\step_0.info"
-    git_cmd["add"](addFile)
-    git_cmd["commit"]("Add migration steps")
+    gitCmd["add"](addFile)
+    gitCmd["commit"]("Add migration steps")
     if x == "0":
-        pushOption(repo, stepsBranch)
+        PushOption(repo, stepsBranch)
     elif x in ("00", "10"):
-        git_cmd["push"](["--set-upstream", "origin", stepsBranch])
+        remote = TrackingRemote(stepsBranch)
+        PushToRemote(remote, stepsBranch)
         url = "https://bitbucket.org/{}/{}/branch/{}".format(
             gBitBucketOrg, repo, stepsBranch
         )
-        print_("Opening Branch...")
+        Print_("Opening Branch...")
         webbrowser.open(url)
 
 
-def remoteGone(taskBranch):
+def RemoteGone(taskBranch):
     if taskBranch != gMainBranch:
-        print_(f"You must start from branch: {gMainBranch}")
-        return
-    exitcode, out, err = run_command(["git", "branch", "-vv"])
+        options = [
+            f"Checkout {gMainBranch}", # 0
+            "Exit",                    # 1
+        ]
+        optionInt = GetResponse(options)
+        if optionInt == 0:
+            CheckoutFetchPull(taskBranch)
+        elif optionInt == 1:
+            return
+    exitcode, out, err = RunCommand(["git", "branch", "-vv"])
     lines = out.splitlines()
     goneBranches = [line.split(None, 1)[0] for line in lines if ": gone]" in line]
-    print_indented("**   Branches that no longer exist on Remote:")
-    print_()
+    PrintIndented("**   Branches that no longer exist on Remote:")
+    Print_()
     for branch in goneBranches:
-        print_indented(branch)
+        PrintIndented(branch)
     if not goneBranches:
-        print_indented("**   No branches to delete")
+        PrintIndented("**   No branches to delete")
         return
-    print_()
+    Print_()
     options = [
         "Delete All",          # 0
         "Delete Individually", # 1
         "Exit",                # 2
     ]
-    optionInt = getResponse(options)
+    optionInt = GetResponse(options)
     if optionInt == 0:
         for b in goneBranches:
-            exitcode, out, err = run_command(["git", "branch", "-D", b])
-            print_(out)
+            exitcode, out, err = RunCommand(["git", "branch", "-D", b])
+            Print_(out)
     elif optionInt == 1:
         for b in goneBranches:
             options = [
-                f"Delete {branch}", # 0
-                "Skip",             # 1
+                f"Delete {b}", # 0
+                "Skip",        # 1
             ]
-            optionInt = getResponse(options)
+            optionInt = GetResponse(options)
             if optionInt == 0:
-                exitcode, out, err = run_command(["git", "branch", "-D", b])
-                print_(out)
+                exitcode, out, err = RunCommand(["git", "branch", "-D", b])
+                Print_(out)
             elif optionInt == 1:
                 pass
     elif optionInt == 2:
         pass
 
 
-def header_footer(repo, taskBranch):
+def HeaderFooter(repo, taskBranch):
     lenRepo = len(repo)
     lenBranch = len(taskBranch)
     lenMain = len(gMainBranch)
@@ -551,21 +592,21 @@ def header_footer(repo, taskBranch):
     m = f"    **   Main: {gMainBranch}" + "   " + " " * (l - lenMain - 6) + "**"
     d = f"    **   Database: {gDatabase}" + "   " + " " * (l - lenDb - 10) + "**"
     s = "    " + "*" * (len(b) - 4)
-    print_("\n" + s)
-    print_(p)
-    print_(b)
-    print_(m)
-    print_(d)
-    print_(s + "\n")
+    Print_("\n" + s)
+    Print_(p)
+    Print_(b)
+    Print_(m)
+    Print_(d)
+    Print_(s + "\n")
 
 
-def main(repo, optionOne=None, optionTwo=None):
+def Main(repo, optionOne=None, optionTwo=None):
     repoPath = os.path.join(gLocalReposDir, repo)
-    exitcode, out, err = run_command(["git", "symbolic-ref", "--short", "HEAD"])
+    exitcode, out, err = RunCommand(["git", "symbolic-ref", "--short", "HEAD"])
     taskBranch = out.strip()
-    header_footer(repo, taskBranch)
-    exitcode, out, err = run_command(["git", "status"])
-    print_(out)
+    HeaderFooter(repo, taskBranch)
+    exitcode, out, err = RunCommand(["git", "status"])
+    Print_(out)
 
     lines = out.splitlines()
     pattern = re.compile(r"database\/(\w+)\/\S+\.sql$")
@@ -593,10 +634,10 @@ def main(repo, optionOne=None, optionTwo=None):
             "Repository List",        # 8
             "Exit (Press Enter)",     # 9
         ]
-        optionInt = getResponse(options)
+        optionInt = GetResponse(options)
 
     if optionInt == 0:
-        remote = trackingRemote(taskBranch, 2)
+        remote = TrackingRemote(taskBranch, 2)
         if optionTwo is not None:
             optionInt = optionTwo
         else:
@@ -608,28 +649,22 @@ def main(repo, optionOne=None, optionTwo=None):
                 "Main Menu",              # 4
                 "Exit",                   # 5
             ]
-            optionInt = getResponse(options, 2)
+            optionInt = GetResponse(options, 2)
         if optionInt == 0:
-            if git_cmd["commitAll"]():
-                if remote == "R":
-                    git_cmd["push"]()
-                elif remote == "N":
-                    git_cmd["push"](["--set-upstream", "origin", taskBranch])    
-                afterPush(repo, taskBranch, databaseItems)
+            if gitCmd["commitAll"]():
+                PushToRemote(remote, taskBranch)
+                AfterPush(repo, taskBranch, databaseItems)
         elif optionInt == 2:
-            git_cmd["addAll"]()
+            gitCmd["addAll"]()
         if optionInt in (1, 2):
-            if git_cmd["commit"]():
-                if remote == "R":
-                    git_cmd["push"]()
-                elif remote == "N":
-                    git_cmd["push"](["--set-upstream", "origin", taskBranch])    
-                afterPush(repo, taskBranch, databaseItems)
+            if gitCmd["commit"]():
+                PushToRemote(remote, taskBranch)
+                AfterPush(repo, taskBranch, databaseItems)
         elif optionInt == 3:
-            if git_cmd["commit"]():
-                pushOption(repo, taskBranch)
+            if gitCmd["commit"]():
+                PushOption(repo, taskBranch)
         elif optionInt == 4:
-            main(repo)
+            Main(repo)
         elif optionInt == 5:
             pass
     elif optionInt == 1:
@@ -641,35 +676,28 @@ def main(repo, optionOne=None, optionTwo=None):
             f"Checkout {gMainProdBranch}",  # 4
             "Main Menu",                    # 5
         ]
-        optionInt = getResponse(options, 2)
+        optionInt = GetResponse(options, 2)
         if optionInt in (0, 1):
-            exitcode, out, err = run_command(["git", "branch"])
-            lines = out.splitlines()
-            localLines = [l.strip() for l in lines]
-            branchesList = []
-            for p in gBranchPrefixes:
-                for l in localLines:
-                    if l.find(p) == 0:
-                        branchesList.append(l)
+            branchesList = GetLocalBranches()
         if optionInt == 0:
             if len(branchesList) > 0:
-                optionInt = getResponse(branchesList, 3)
+                optionInt = GetResponse(branchesList, 3)
                 if optionInt == 1000:
                     return
                 try:
-                    git_cmd["checkout"](branchesList[optionInt])
+                    gitCmd["checkout"](branchesList[optionInt])
                 except:
                     raise Exception(" Invalid Selection.")
             else:
-                print_("\n")
-                print_indented(
+                Print_("\n")
+                PrintIndented(
                     "** No prefixed branches available to checkout. **\n", level=3
                 )
-                print_("\n")
-            main(repo)
+                Print_("\n")
+            Main(repo)
         elif optionInt == 1:
-            git_cmd["fetch"](["--prune", "origin"])
-            exitcode, out, err = run_command(["git", "branch", "-r"])
+            gitCmd["fetch"](["--prune", "origin"])
+            exitcode, out, err = RunCommand(["git", "branch", "-r"])
             lines = out.splitlines()
             remoteLines = [l.strip() for l in lines]
             RemoteBranchesList = []
@@ -682,11 +710,11 @@ def main(repo, optionOne=None, optionTwo=None):
                     if l.find(f"origin/{p}") == 0 and l[7:] not in branchesList:
                         RemoteBranchesList.append(l)
             if len(RemoteBranchesList) > 0:
-                optionInt = getResponse(RemoteBranchesList, 3)
+                optionInt = GetResponse(RemoteBranchesList, 3)
                 if optionInt == 1000:
                     return
                 try:
-                    exitcode, out, err = run_command(
+                    exitcode, out, err = RunCommand(
                         [
                             "git",
                             "checkout",
@@ -699,72 +727,77 @@ def main(repo, optionOne=None, optionTwo=None):
                 except:
                     raise Exception(" Invalid Selection.")
             else:
-                print_("\n")
-                print_indented(
+                Print_("\n")
+                PrintIndented(
                     "** No prefixed branches available to checkout. **\n", level=3
                 )
-                print_("\n")
-            main(repo)
+                Print_("\n")
+            Main(repo)
         elif optionInt == 2:
-            git_cmd["checkout"](gSelectedDevHead)
-            main(repo)
+            gitCmd["checkout"](gSelectedDevHead)
+            Main(repo)
         elif optionInt == 3:
-            git_cmd["checkout"](gMainBranch)
-            main(repo)
+            gitCmd["checkout"](gMainBranch)
+            Main(repo)
         elif optionInt == 4:
-            git_cmd["checkout"](gMainProdBranch)
-            main(repo)
+            gitCmd["checkout"](gMainProdBranch)
+            Main(repo)
         elif optionInt == 5:
-            main(repo)
+            Main(repo)
     elif optionInt == 2:
-        remote = trackingRemote(taskBranch, 2)
+        remote = TrackingRemote(taskBranch, 2)
         options = [
             f"Fetch, Prune & Pull (must be on {gMainBranch})", # 0
             "Fetch & Prune Origin",                            # 1
             "Pull",                                            # 2
             f"Pull {gSelectedDevHead}",                        # 3
             f"Pull {gSelectedDevHead} & {gMainBranch}",        # 4
-            "Push",                                            # 5
-            "Main Menu",                                       # 6
-            "Exit",                                            # 7
+            f"Pull {gMainBranch}",                             # 5
+            "Push",                                            # 6
+            "Main Menu",                                       # 7
+            "Exit",                                            # 8
         ]
-        optionInt = getResponse(options, 2)
+        optionInt = GetResponse(options, 2)
         if optionInt == 0:
             if taskBranch not in (gMainBranch, gMainProdBranch):
-                print_(
+                Print_(
                     f"You must start from branch: {gMainBranch} or {gMainProdBranch}"
                 )
                 return
-            git_cmd["fetch"](["--prune", "origin"])
-            git_cmd["pull"]()
-            main(repo)
+            gitCmd["fetch"](["--prune", "origin"])
+            gitCmd["pull"]()
+            Main(repo)
         elif optionInt == 1:
-            git_cmd["fetch"](["--prune", "origin"])
-            main(repo)
+            gitCmd["fetch"](["--prune", "origin"])
+            Main(repo)
         elif optionInt == 2:
-            git_cmd["pull"]()
-            main(repo)
+            gitCmd["pull"]()
+            Main(repo)
         elif optionInt in (3, 303):
-            checkout_devhead_pull(taskBranch, optionInt)
-            main(repo)
+            CheckoutDevheadPull(taskBranch, optionInt)
+            Main(repo)
         elif optionInt in (4, 404):
-            checkout_devhead_pull(taskBranch, optionInt, True)
-            main(repo)
-        elif optionInt == 5:
-            if remote == "R":
-                git_cmd["push"]()
-            elif remote == "N":
-                git_cmd["push"](["--set-upstream", "origin", taskBranch])    
-            main(repo)
+            CheckoutDevheadPull(taskBranch, optionInt, True)
+            Main(repo)
+        elif optionInt in (5, 505):
+            if taskBranch != gMainBranch:
+                gitCmd["checkout"](gMainBranch)
+            gitCmd["pull"]()
+            if optionInt > 100:
+                gitCmd["checkout"](taskBranch)
+            Main(repo)
         elif optionInt == 6:
-            main(repo)
+            PushToRemote(remote, taskBranch)
+            Main(repo)
         elif optionInt == 7:
+            Main(repo)
+        elif optionInt == 8:
             pass
 
     elif optionInt == 3:
         migration = f"({gSelectedMigration})"
-        print_indented("-" * len(migration), 2)
-        print_indented(migration, 2)
+        PrintIndented("-" * len(migration), 2)
+        PrintIndented(migration, 2)
         if optionTwo is not None:
             optionInt = optionTwo
         else:
@@ -774,9 +807,9 @@ def main(repo, optionOne=None, optionTwo=None):
                 "Main Menu",                  # 2
                 "Exit",                       # 3
             ]
-            optionInt = getResponse(options, 2)
+            optionInt = GetResponse(options, 2)
         if optionInt == 20 and taskBranch != gMainBranch:
-            print_(f"You must start from branch: {gMainBranch}")
+            Print_(f"You must start from branch: {gMainBranch}")
             return
         if optionInt in (0, 1, 20):
             if taskBranch.find(gStepsPrefix) == 0:
@@ -799,13 +832,13 @@ def main(repo, optionOne=None, optionTwo=None):
                 raise Exception(" Steps not found.")
             c = f'xcopy "{gStepsPath}" "{repoPath}\\migration\\{gSelectedMigration}\\{issue}" /f /i /k'
             os.system(c)
-            x = input(" Modify file as needed. Press 0 to continue...")
+            x = input(" Modify file as needed. Press 0 [10,00] to continue...")
             if x in ("0", "00", "10"):
-                commitSteps(repo, taskBranch, stepsBranch, gSelectedMigration, issue, x)
+                CommitSteps(repo, taskBranch, stepsBranch, gSelectedMigration, issue, x)
         elif optionInt == 1:
-            commitSteps(repo, taskBranch, stepsBranch, gSelectedMigration, issue)
+            CommitSteps(repo, taskBranch, stepsBranch, gSelectedMigration, issue)
         elif optionInt == 2:
-            main(repo)
+            Main(repo)
         elif optionInt == 3:
             pass
     elif optionInt == 4:
@@ -814,58 +847,58 @@ def main(repo, optionOne=None, optionTwo=None):
             f"Merge into {gSelectedDevHead}...", # 1
             "Main Menu",                         # 2
         ]
-        optionInt = getResponse(options, 2)
+        optionInt = GetResponse(options, 2)
         if optionInt == 0:
             if taskBranch == gMainBranch:
                 raise Exception(
                     f"You cannot run this from {gMainBranch}."
                     " Checkout your task branch first!"
                 )
-            git_cmd["checkout"](gMainBranch)
-            git_cmd["pull"]()
-            git_cmd["checkout"](taskBranch)
-            git_cmd["merge"](gMainBranch)
-            pushOption(repo, taskBranch)
+            gitCmd["checkout"](gMainBranch)
+            gitCmd["pull"]()
+            gitCmd["checkout"](taskBranch)
+            gitCmd["merge"](gMainBranch)
+            PushOption(repo, taskBranch)
         elif optionInt == 1:
-            merge_into_devhead(repo, taskBranch, databaseItems)
+            MergeIntoDevhead(repo, taskBranch, databaseItems)
         elif optionInt == 2:
-            main(repo)
+            Main(repo)
     elif optionInt == 5:
         if taskBranch != gMainBranch:
-            git_cmd["checkout"](gMainBranch)
-        git_cmd["pull"]()
+            gitCmd["checkout"](gMainBranch)
+        gitCmd["pull"]()
         newBranch = input(" New Branch: ")
-        git_cmd["checkout"](["-b", newBranch])
-        main(repo)
+        gitCmd["checkout"](["-b", newBranch])
+        Main(repo)
     elif optionInt == 6:
         url = "https://bitbucket.org/{}/{}/branch/{}".format(
             gBitBucketOrg, repo, taskBranch
         )
-        print_("Opening Branch...")
+        Print_("Opening Branch...")
         webbrowser.open(url)
     elif optionInt == 7:
-        remoteGone(taskBranch)
-        main(repo)
+        RemoteGone(taskBranch)
+        Main(repo)
     elif optionInt == 8:
-        selectRepo(False)
+        SelectRepo(False)
     elif optionInt == 9:
         pass
     # hidden options
     elif optionInt == 100:
-        checkout_fetch_pull(taskBranch)
-        main(repo)
+        CheckoutFetchPull(taskBranch)
+        Main(repo)
     elif optionInt == 105:
-        checkout_fetch_pull(taskBranch)
+        CheckoutFetchPull(taskBranch)
         newBranch = input(" New Branch: ")
-        git_cmd["checkout"](["-b", newBranch])
-        main(repo)
+        gitCmd["checkout"](["-b", newBranch])
+        Main(repo)
     elif optionInt == 107:
-        checkout_fetch_pull(taskBranch)
-        remoteGone(gMainBranch)
-        main(repo)
+        CheckoutFetchPull(taskBranch)
+        RemoteGone(gMainBranch)
+        Main(repo)
 
 
-def selectRepo(useDefault=True):
+def SelectRepo(useDefault=True):
     global gRepo
     global gMainBranch
     global gSelectedDevHead
@@ -880,7 +913,7 @@ def selectRepo(useDefault=True):
     if gDefaultRepo and useDefault and gDefaultRepo in dirs:
         repo = gRepo = gDefaultRepo
     else:
-        optionInt = getResponse(dirs, 1, " Choose Repository: ")
+        optionInt = GetResponse(dirs, 1, " Choose Repository: ")
         if optionInt == 200:
             if gShortcutRepo and gShortcutRepo in dirs:
                 repo = gShortcutRepo
@@ -888,7 +921,7 @@ def selectRepo(useDefault=True):
                 optionOne = 0
                 optionTwo = 0
             else:
-                print_(f"Repo {gShortcutRepo} not found.")
+                Print_(f"Repo {gShortcutRepo} not found.")
                 return
         elif optionInt == 300:
             if gShortcutRepoMigration and gShortcutRepoMigration in dirs:
@@ -897,7 +930,7 @@ def selectRepo(useDefault=True):
                 optionOne = 3
                 optionTwo = 0
             else:
-                print_(f"Repo {gShortcutRepoMigration} not found.")
+                Print_(f"Repo {gShortcutRepoMigration} not found.")
                 return
         elif optionInt == 1000:
             return
@@ -910,7 +943,7 @@ def selectRepo(useDefault=True):
     repoPath = os.path.join(gLocalReposDir, repo)
     os.chdir(repoPath)
 
-    gDatabase = get_key(gDatabases, repo)
+    gDatabase = GetKey(gDatabases, repo)
     if repo in gSpecificMainDev:
         gMainBranch = gSpecificMainDev[repo]
     else:
@@ -926,14 +959,14 @@ def selectRepo(useDefault=True):
     else:
         gSelectedMigration = gMigrationFolder
 
-    main(repo, optionOne, optionTwo)
+    Main(repo, optionOne, optionTwo)
 
 
 # load global settings from config file
 fileName = "git-123.json"
 path = os.path.join(os.getcwd(), fileName)
 if not os.path.exists(fileName):
-    print_("Could not find config file named git-123.json in same folder.")
+    Print_("Could not find config file named git-123.json in same folder.")
 
 with open(path, "r") as json_config_file:
     configData = json.load(json_config_file)
@@ -969,7 +1002,7 @@ gMsgLinesStart = 0
 gMsgLinesEnd = 0
 gRepo = ""
 
-git_cmd = git_commands(
+gitCmd = GitCommands(
     ["git", "add", "--all"],
     ["git", "add"],
     ["git", "commit", "-a", "-m"],
@@ -992,13 +1025,13 @@ if gMessageHistory and os.path.exists(fileName):
         gMessages = m.readlines()
         gMsgLinesStart = len(gMessages)
 
-print_("\n" * 3 + "_" * 24)
-print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
-print_("\nBegin.\n" + "_" * 24 + "\n" * 3)
-selectRepo()
+Print_("\n" * 3 + "_" * 24)
+Print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
+Print_("\nBegin.\n" + "_" * 24 + "\n" * 3)
+SelectRepo()
 
-print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
-print_("\nDone.\n")
+Print_(datetime.now().strftime("%a, %b %d: %I:%M:%S %p"))
+Print_("\nDone.\n")
 
 if gMessageHistory:
     gMsgLinesEnd = len(gMessages)
@@ -1010,10 +1043,10 @@ if gMessageHistory:
         gMessageFile.close()
 
 try:
-    exitcode, out, err = run_command(["git", "symbolic-ref", "--short", "HEAD"])
+    exitcode, out, err = RunCommand(["git", "symbolic-ref", "--short", "HEAD"])
     taskBranch = out.strip()
     if gRepo:
-        header_footer(gRepo, taskBranch)
+        HeaderFooter(gRepo, taskBranch)
 except:
     pass
 
